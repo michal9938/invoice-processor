@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   CheckCircle2,
@@ -60,8 +60,8 @@ export default function PriceRecordsPage() {
     fetchPriceRecords();
   }, []);
 
-  // Filter records based on search term
-  useEffect(() => {
+  // Search function to filter records
+  const performSearch = useCallback(() => {
     if (!searchTerm.trim()) {
       setRecords(allRecords);
       return;
@@ -81,6 +81,18 @@ export default function PriceRecordsPage() {
 
     setRecords(filtered);
   }, [searchTerm, allRecords]);
+
+  // Filter records based on search term (real-time)
+  useEffect(() => {
+    performSearch();
+  }, [performSearch]);
+
+  // Handle Enter key press
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      performSearch();
+    }
+  };
 
   const handleActivate = async (record: BuyingPriceRecord) => {
     if (!record.sku) {
@@ -260,12 +272,16 @@ export default function PriceRecordsPage() {
         {/* Search Bar */}
         <div className="mb-6 animate-fade-in">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-text-tertiary" />
+            <Search 
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-text-tertiary cursor-pointer hover:text-text-secondary transition-colors" 
+              onClick={performSearch}
+            />
             <input
               type="text"
               placeholder="Search by SKU, Supplier, or Product..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={handleKeyDown}
               className="w-full pl-10 pr-4 py-2 bg-surface border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             />
           </div>
