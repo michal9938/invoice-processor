@@ -84,6 +84,7 @@ export default function OverviewPage() {
       color: "from-[#06b6d4] to-[#0891b2]",
       bgColor: "bg-[#06b6d4]/10",
       iconColor: "#06b6d4",
+
     },
     {
       title: "Needs Review",
@@ -92,6 +93,7 @@ export default function OverviewPage() {
       color: "from-[#f59e0b] to-[#ef4444]",
       bgColor: "bg-[#f59e0b]/10",
       iconColor: "#f59e0b",
+
     },
     
     {
@@ -153,21 +155,21 @@ export default function OverviewPage() {
             {statCards.map((card, index) => (
               <div
                 key={card.title}
-                className="flex flex-row items-baseline justify-between gap-2 bg-surface rounded-xl p-4 md:p-6 border border-border hover-lift animate-fade-in"
+                className="relative overflow-hidden flex flex-row items-center justify-between bg-surface rounded-xl p-4 md:p-6 border border-border hover-lift animate-fade-in"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <div className="flex flex-row items-center justify-between gap-2 mb-4">
+                <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${card.color} opacity-20 blur-xl absolute -right-4 -top-4`} />
+                <div className="flex flex-row items-center gap-3 mb-4 relative z-10">
                   <div
                     className={`w-12 h-12 rounded-lg ${card.bgColor} flex items-center justify-center`}
                   >
                     <card.icon className="w-6 h-6" style={{ color: card.iconColor }} />
                   </div>
-                  <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${card.color} opacity-20 blur-xl absolute -right-4 -top-4`} />
                 </div>
-                <h3 className="text-text-tertiary text-sm font-medium mb-1">
+                <h3 className="text-text-tertiary text-sm font-medium mb-1 relative z-10">
                   {card.title}
                 </h3>
-                <p className="text-3xl font-bold text-text-primary">
+                <p className="text-3xl font-bold text-text-primary relative z-10">
                   {card.value}
                 </p>
               </div>
@@ -182,66 +184,211 @@ export default function OverviewPage() {
           </h2>
           <div className="relative overflow-x-auto pb-4">
             <div className="flex items-center justify-between min-w-max gap-2 md:gap-4 px-4 md:px-8">
-              {[
-                { label: "Received", value: stats.received, color: "#3b82f6" },
-                { label: "Parsed", value: stats.parsed, color: "#8b5cf6" },
-                {
-                  label: "Needs Review",
-                  value: stats.needs_review,
-                  color: "#f59e0b",
-                },
-                {
-                  label: "Validated",
-                  value: stats.validated,
-                  color: "#10b981",
-                },
-                {
-                  label: "Approved",
-                  value: stats.approved,
-                  color: "#059669",
-                },
-              ].map((status, index, array) => (
-                <div key={status.label} className="flex items-center">
+              {/* Received */}
+              <div className="flex items-center">
+                <div className="flex flex-col items-center relative z-10">
+                  {/* Milestone Circle */}
+                  <div
+                    className="w-16 h-16 md:w-20 md:h-20 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-bold text-base md:text-lg shadow-lg border-4 border-surface relative"
+                    style={{ backgroundColor: "#3b82f6" }}
+                  >
+                    {stats.received}
+                  </div>
+                  {/* Label */}
+                  <p className="text-xs md:text-sm text-text-secondary font-medium text-center max-w-[80px] md:max-w-[100px]">
+                    Received
+                  </p>
+                </div>
+                {/* Connector Line/Arrow */}
+                <div className="flex-1 mx-2 md:mx-4 relative min-w-[40px] md:min-w-[60px]">
+                  {/* Thick highlighted line */}
+                  <div className="absolute top-1/2 left-0 right-0 h-1.5 bg-gradient-to-r from-[#06b6d4] via-[#0891b2] to-[#06b6d4] transform -translate-y-1/2 rounded-full shadow-sm"></div>
+                  {/* Arrow head */}
+                  <div className="absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-1/2 z-10">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      className="text-[#06b6d4] drop-shadow-sm"
+                    >
+                      <path
+                        d="M2 10L16 10M16 10L12 6M16 10L12 14"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              {/* Parsed */}
+              <div className="flex items-center">
+                <div className="flex flex-col items-center relative z-10">
+                  {/* Milestone Circle */}
+                  <div
+                    className="w-16 h-16 md:w-20 md:h-20 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-bold text-base md:text-lg shadow-lg border-4 border-surface relative"
+                    style={{ backgroundColor: "#8b5cf6" }}
+                  >
+                    {stats.parsed}
+                  </div>
+                  {/* Label */}
+                  <p className="text-xs md:text-sm text-text-secondary font-medium text-center max-w-[80px] md:max-w-[100px]">
+                    Parsed
+                  </p>
+                </div>
+                <div className="flex flex-col gap-12">
+                  {/* Connector Line/Arrow */}
+                  <div className="flex-1 mx-2 md:mx-4 relative min-w-[40px] md:min-w-[60px] rotate-[325deg]">
+                  {/* Thick highlighted line */}
+                  <div className="absolute top-1/2 left-0 right-0 h-1.5 bg-gradient-to-r from-[#06b6d4] via-[#0891b2] to-[#06b6d4] transform -translate-y-1/2 rounded-full shadow-sm"></div>
+                  {/* Arrow head */}
+                  <div className="absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-1/2 z-10">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      className="text-[#06b6d4] drop-shadow-sm"
+                    >
+                      <path
+                        d="M2 10L16 10M16 10L12 6M16 10L12 14"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                  </div>
+                  {/* Connector Line/Arrow */}
+                  <div className="flex-1 mx-2 md:mx-4 relative min-w-[40px] md:min-w-[60px] rotate-[30deg]">
+                    {/* Thick highlighted line */}
+                    <div className="absolute top-1/2 left-0 right-0 h-1.5 bg-gradient-to-r from-[#06b6d4] via-[#0891b2] to-[#06b6d4] transform -translate-y-1/2 rounded-full shadow-sm"></div>
+                    {/* Arrow head */}
+                    <div className="absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-1/2 z-10">
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        className="text-[#06b6d4] drop-shadow-sm"
+                      >
+                        <path
+                          d="M2 10L16 10M16 10L12 6M16 10L12 14"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                
+                
+              </div>
+              <div className="flex flex-col items-center justify-between gap-4">
+                {/* Needs Review */}
+                <div className="flex items-center">
                   <div className="flex flex-col items-center relative z-10">
                     {/* Milestone Circle */}
                     <div
                       className="w-16 h-16 md:w-20 md:h-20 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-bold text-base md:text-lg shadow-lg border-4 border-surface relative"
-                      style={{ backgroundColor: status.color }}
+                      style={{ backgroundColor: "#f59e0b" }}
                     >
-                      {status.value}
+                      {stats.needs_review}
                     </div>
                     {/* Label */}
                     <p className="text-xs md:text-sm text-text-secondary font-medium text-center max-w-[80px] md:max-w-[100px]">
-                      {status.label}
+                      Needs Review
                     </p>
                   </div>
                   {/* Connector Line/Arrow */}
-                  {index < array.length - 1 && (
-                    <div className="flex-1 mx-2 md:mx-4 relative min-w-[40px] md:min-w-[60px]">
-                      {/* Thick highlighted line */}
-                      <div className="absolute top-1/2 left-0 right-0 h-1.5 bg-gradient-to-r from-[#06b6d4] via-[#0891b2] to-[#06b6d4] transform -translate-y-1/2 rounded-full shadow-sm"></div>
-                      {/* Arrow head */}
-                      <div className="absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-1/2 z-10">
-                        <svg
-                          width="20"
-                          height="20"
-                          viewBox="0 0 20 20"
-                          fill="none"
-                          className="text-[#06b6d4] drop-shadow-sm"
-                        >
-                          <path
-                            d="M2 10L16 10M16 10L12 6M16 10L12 14"
-                            stroke="currentColor"
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </div>
+                  <div className="flex-1 mx-2 rotate-[30deg] md:mx-4 top-2 relative min-w-[40px] md:min-w-[60px]">
+                    {/* Thick highlighted line */}
+                    <div className="absolute top-1/2 left-0 right-0 h-1.5 bg-gradient-to-r from-[#06b6d4] via-[#0891b2] to-[#06b6d4] transform -translate-y-1/2 rounded-full shadow-sm"></div>
+                    {/* Arrow head */}
+                    <div className="absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-1/2 z-10">
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        className="text-[#06b6d4] drop-shadow-sm"
+                      >
+                        <path
+                          d="M2 10L16 10M16 10L12 6M16 10L12 14"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
                     </div>
-                  )}
+                  </div>
                 </div>
-              ))}
+
+                {/* Validated */}
+                <div className="flex items-center">
+                  <div className="flex flex-col items-center relative z-10">
+                    {/* Milestone Circle */}
+                    <div
+                      className="w-16 h-16 md:w-20 md:h-20 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-bold text-base md:text-lg shadow-lg border-4 border-surface relative"
+                      style={{ backgroundColor: "#10b981" }}
+                    >
+                      {stats.validated}
+                    </div>
+                    {/* Label */}
+                    <p className="text-xs md:text-sm text-text-secondary font-medium text-center max-w-[80px] md:max-w-[100px]">
+                      Validated
+                    </p>
+                  </div>
+                  {/* Connector Line/Arrow */}
+                  <div className="flex-1 mx-2 rotate-[330deg] bottom-7 md:mx-4 relative min-w-[40px] md:min-w-[60px]">
+                    {/* Thick highlighted line */}
+                    <div className="absolute top-1/2 left-0 right-0 h-1.5 bg-gradient-to-r from-[#06b6d4] via-[#0891b2] to-[#06b6d4] transform -translate-y-1/2 rounded-full shadow-sm"></div>
+                    {/* Arrow head */}
+                    <div className="absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-1/2 z-10">
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        className="text-[#06b6d4] drop-shadow-sm"
+                      >
+                        <path
+                          d="M2 10L16 10M16 10L12 6M16 10L12 14"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+
+              {/* Approved */}
+              <div className="flex items-center">
+                <div className="flex flex-col items-center relative z-10">
+                  {/* Milestone Circle */}
+                  <div
+                    className="w-16 h-16 md:w-20 md:h-20 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-bold text-base md:text-lg shadow-lg border-4 border-surface relative"
+                    style={{ backgroundColor: "#059669" }}
+                  >
+                    {stats.approved}
+                  </div>
+                  {/* Label */}
+                  <p className="text-xs md:text-sm text-text-secondary font-medium text-center max-w-[80px] md:max-w-[100px]">
+                    Approved
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -387,7 +387,7 @@ export default function InvoiceDetailPage() {
               Subtotal
             </h3>
             <p className="text-2xl font-bold text-text-primary">
-              {invoice.currency}
+              {formatCurrency(invoice.subtotal_amount, invoice.currency)}
             </p>
           </div>
           <div className="bg-surface rounded-xl p-6 border border-border hover-lift">
