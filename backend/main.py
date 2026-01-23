@@ -2,6 +2,16 @@
 FastAPI application main entry point
 Sets up the FastAPI app, includes routers, and handles startup/shutdown events
 """
+import sys
+from pathlib import Path
+
+# Add parent directory to path if running from backend directory
+# This allows imports to work when running: py -m uvicorn main:app from backend folder
+backend_dir = Path(__file__).parent
+parent_dir = backend_dir.parent
+if str(parent_dir) not in sys.path:
+    sys.path.insert(0, str(parent_dir))
+
 import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -236,17 +246,9 @@ async def trigger_email_polling():
 
 if __name__ == "__main__":
     import uvicorn
-    import sys
-    from pathlib import Path
-    
-    # Add parent directory to path if running from backend directory
-    backend_dir = Path(__file__).parent
-    parent_dir = backend_dir.parent
-    if str(parent_dir) not in sys.path:
-        sys.path.insert(0, str(parent_dir))
     
     uvicorn.run(
-        "backend.main:app",
+        "main:app",
         host=settings.HOST,
         port=settings.PORT,
         reload=True

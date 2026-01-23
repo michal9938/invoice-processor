@@ -86,16 +86,18 @@ cd backend
 python main.py
 ```
 
-**Option 3: Set PYTHONPATH (if running from backend directory):**
+**Option 3: Run directly from backend directory:**
 ```bash
 cd backend
-# Windows PowerShell:
-$env:PYTHONPATH=".."; py -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8080
 # Windows CMD:
-set PYTHONPATH=.. && py -m uvicorn main:app --reload --host 0.0.0.0 --port 8080
+py -m uvicorn main:app --reload --host 0.0.0.0 --port 8080
+# Windows PowerShell:
+py -m uvicorn main:app --reload --host 0.0.0.0 --port 8080
 # Linux/Mac:
-PYTHONPATH=.. python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8080
+python -m uvicorn main:app --reload --host 0.0.0.0 --port 8080
 ```
+
+Note: The path is automatically configured in `main.py`, so no PYTHONPATH setup is needed.
 
 #### Using Docker(recommended):
 

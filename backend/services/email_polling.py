@@ -123,6 +123,7 @@ class EmailPollingService:
     async def save_pdf_to_pdfs_bucket(self, pdf_content: bytes, filename: str) -> str:
         """
         Save PDF to the pdfs bucket in Supabase storage immediately after finding it
+        Checks if a file with the same name (without timestamp) already exists and skips upload if found.
         
         Args:
             pdf_content: PDF file content as bytes
@@ -133,12 +134,44 @@ class EmailPollingService:
         """
         pdfs_storage = supabase_client.get_pdfs_storage()
         
-        # Generate unique filename with timestamp to ensure uniqueness
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        # Generate safe filename (remove spaces and slashes)
         safe_filename = filename.replace(" ", "_").replace("/", "_")
-        file_path = f"{timestamp}_{safe_filename}"
         
         try:
+            # List all files in the pdfs bucket to check for duplicates
+            try:
+                existing_files_response = pdfs_storage.list()
+                # Handle different response formats
+                if isinstance(existing_files_response, list):
+                    existing_files = existing_files_response
+                elif hasattr(existing_files_response, 'data'):
+                    existing_files = existing_files_response.data or []
+                else:
+                    existing_files = []
+            except Exception as list_error:
+                logger.warning(f"Failed to list existing files, proceeding with upload: {list_error}")
+                existing_files = []
+            
+            # Check if any existing file has the same safe_filename (ignoring timestamp prefix)
+            # Files are stored as: {timestamp}_{safe_filename}
+            for existing_file in existing_files:
+                # Handle different file object structures
+                if isinstance(existing_file, str):
+                    existing_name = existing_file
+                elif isinstance(existing_file, dict):
+                    existing_name = existing_file.get("name", "")
+                else:
+                    continue
+                
+                # Check if the existing file ends with _{safe_filename}
+                if existing_name.endswith(f"_{safe_filename}"):
+                    logger.info(f"PDF with same name already exists: {existing_name}, skipping upload")
+                    return existing_name
+            
+            # No duplicate found, proceed with upload
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+            file_path = f"{timestamp}_{safe_filename}"
+            
             # Upload file directly to pdfs bucket root
             pdfs_storage.upload(file_path, pdf_content, file_options={"content-type": "application/pdf"})
             
