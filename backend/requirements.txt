@@ -1,0 +1,34 @@
+# FastAPI and web server
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+
+# Supabase client
+supabase>=2.0.3
+postgrest>=0.13.0
+
+# HTTP client for Microsoft Graph API
+httpx>=0.25.1
+
+# PDF processing
+pdfplumber>=0.10.3
+Pillow>=10.1.0
+
+# OCR (for future use)
+# pytesseract>=0.3.10
+
+# Configuration management - install without building from source
+# Note: If installation fails, try: pip install --only-binary :all: pydantic pydantic-core
+pydantic>=2.9.0
+pydantic-settings>=2.3.0
+
+# Utilities
+python-dotenv>=1.0.0
+
+# OpenAI for LLM-based invoice extraction
+openai>=1.12.0
+
+# Testing
+pytest>=7.4.3
+pytest-asyncio>=0.21.1
+
