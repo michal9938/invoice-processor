@@ -1,24 +1,28 @@
 version: '3.8'
 
 services:
-  invoice-api:
+  patent-generator:
     build:
-      context: ./backend
+      context: .
       dockerfile: Dockerfile
-    container_name: invoice-control-api
+    container_name: patent-generator
     ports:
       - "8080:8080"
     env_file:
       - .env
     environment:
       - PORT=8080
-      - HOST=0.0.0.0
     volumes:
-      - ./backend:/app
+      # Optional: Mount logs directory for persistence
+      - ./backend/logs:/app/backend/logs
+      # Optional: Mount uploads directory
+      - ./backend/app/uploads:/app/backend/app/uploads
+      # Optional: Mount tmp directory
+      - ./backend/tmp:/app/backend/tmp
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/auth/me"]
       interval: 30s
       timeout: 10s
       retries: 3
-
+      start_period: 40s
