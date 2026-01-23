@@ -1,0 +1,30 @@
+# This file is optional - Cloud Run uses Dockerfile by default
+# But can be used for App Engine Flex if needed
+runtime: custom
+env: flex
+
+# Resources
+resources:
+  cpu: 2
+  memory_gb: 2
+  disk_size_gb: 10
+
+# Health check
+readiness_check:
+  path: "/api/v1/auth/me"
+  check_interval_sec: 5
+  timeout_sec: 4
+  failure_threshold: 2
+  success_threshold: 2
+
+liveness_check:
+  path: "/api/v1/auth/me"
+  check_interval_sec: 30
+  timeout_sec: 4
+  failure_threshold: 4
+  success_threshold: 2
+
+# Environment variables (set these in Cloud Run console instead)
+# env_variables:
+#   DATABASE_URL: "postgresql+psycopg2://..."
+#   SECRET_KEY: "..."

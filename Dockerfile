@@ -1,0 +1,90 @@
+# Multi-stage build for Frontend + Backend
+FROM node:20-alpine AS frontend-builder
+
+# Set working directory
+WORKDIR /app/frontend
+
+# Copy frontend package files
+COPY frontend/package*.json ./
+
+# Install frontend dependencies
+RUN npm ci
+
+# Copy frontend source code
+COPY frontend/ ./
+
+# Build Next.js application
+RUN npm run build
+
+# Python backend stage
+FROM python:3.11-slim AS backend-builder
+
+# Set working directory
+WORKDIR /app/backend
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy backend requirements
+COPY backend/requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Final stage - runtime
+FROM python:3.11-slim
+
+# Install runtime dependencies including nginx and net-tools
+RUN apt-get update && apt-get install -y \
+    curl \
+    postgresql-client \
+    nginx \
+    net-tools \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js for Next.js runtime
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy backend from builder
+COPY --from=backend-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=backend-builder /usr/local/bin /usr/local/bin
+COPY backend/ ./backend/
+
+# Copy frontend build from builder
+COPY --from=frontend-builder /app/frontend/.next ./frontend/.next
+COPY --from=frontend-builder /app/frontend/public ./frontend/public
+COPY --from=frontend-builder /app/frontend/package*.json ./frontend/
+COPY --from=frontend-builder /app/frontend/node_modules ./frontend/node_modules
+COPY --from=frontend-builder /app/frontend/next.config.ts ./frontend/
+COPY --from=frontend-builder /app/frontend/tsconfig.json ./frontend/
+COPY --from=frontend-builder /app/frontend/postcss.config.mjs ./frontend/
+COPY --from=frontend-builder /app/frontend/eslint.config.mjs ./frontend/
+COPY --from=frontend-builder /app/frontend/middleware.ts ./frontend/
+COPY --from=frontend-builder /app/frontend/app ./frontend/app
+COPY --from=frontend-builder /app/frontend/components ./frontend/components
+
+# Copy startup script and nginx config
+COPY start.sh ./
+COPY nginx.conf /etc/nginx/nginx.conf
+RUN chmod +x start.sh
+
+# Create necessary directories
+RUN mkdir -p backend/logs backend/tmp/uploads backend/app/uploads
+
+# Expose port (Cloud Run will set PORT env var)
+EXPOSE 8080
+
+# Health check (uses PORT env var)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+    CMD sh -c 'curl -fsS http://localhost:${PORT:-8080}/healthz || exit 1'
+
+# Start both services
+CMD ["./start.sh"]
