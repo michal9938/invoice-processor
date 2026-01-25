@@ -199,7 +199,7 @@ Logo stands for supplier.
 
 Product name and SKU number can be in same cell.
 
-Please extract quantity exactly. Languages are Danish in PDF text.
+Please extract quantity exactly. Languages are Danish in PDF text. And they can have suffix PCS, STK, etc.
 
 Response will be written in English.
 
