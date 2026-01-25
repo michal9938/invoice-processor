@@ -4,6 +4,18 @@ FROM node:20-alpine AS frontend-builder
 # Set working directory
 WORKDIR /app/frontend
 
+# Accept build arguments for Next.js public environment variables
+# These are baked into the JavaScript bundle at build time
+# Default to empty strings if not provided (will cause runtime error, but allows build to complete)
+ARG NEXT_PUBLIC_SUPABASE_URL=""
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY=""
+ARG NEXT_PUBLIC_BACKEND_URL=""
+
+# Set as environment variables for the build process
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
+
 # Copy frontend package files
 COPY frontend/package*.json ./
 
@@ -13,7 +25,7 @@ RUN npm ci
 # Copy frontend source code
 COPY frontend/ ./
 
-# Build Next.js application
+# Build Next.js application (NEXT_PUBLIC_* vars are baked in here)
 RUN npm run build
 
 # Python backend stage
