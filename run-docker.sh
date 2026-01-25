@@ -10,7 +10,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}Patent Generator - Docker Local Setup${NC}"
+echo -e "${GREEN}Invoice Processor - Docker Local Setup${NC}"
 echo ""
 
 # Check if .env file exists
@@ -18,22 +18,37 @@ if [ ! -f .env ]; then
     echo -e "${YELLOW}Warning: .env file not found!${NC}"
     echo "Creating .env.example template..."
     cat > .env.example << EOF
-# Database Configuration
-DATABASE_URL=postgresql+psycopg2://user:password@host:5432/dbname
-
-# Security
-SECRET_KEY=your-secret-key-change-in-production
-
-# API Keys
-ANTHROPIC_API_KEY=your-claude-api-key
-SENDGRID_API_KEY=your-sendgrid-api-key
-
-# Supabase
+# Supabase Configuration
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_KEY=your-supabase-service-key
-SUPABASE_STORAGE_SOURCE_BUCKET=sources
-SUPABASE_STORAGE_PATENT_BUCKET=patents
-SUPABASE_STORAGE_FIGURES_BUCKET=figures
+SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+SUPABASE_PROJECT_ID=your-project-id
+SUPABASE_STORAGE_BUCKET=invoice_files
+
+# Microsoft Graph API Configuration
+GRAPH_TENANT_ID=your-tenant-id
+GRAPH_CLIENT_ID=your-client-id
+GRAPH_CLIENT_SECRET=your-client-secret
+INVOICE_MAIL_ADDRESS=invoices@yourdomain.com
+
+# OpenAI Configuration
+OPENAI_API_KEY=your-openai-api-key
+
+# Worker Settings
+MAX_EMAILS_PER_RUN=5
+POLL_INTERVAL_MINUTES=90
+ENABLE_BACKGROUND_POLLING=false
+
+# PDF Processing Settings
+MAX_PDF_SIZE_MB=10
+SUPPORTED_EXTENSIONS=.pdf
+
+# Validation Settings
+PRICE_TOLERANCE_PERCENT=5.0
+
+# Cloud Run Configuration
+PORT=8080
+HOST=0.0.0.0
 
 # Frontend
 NEXT_PUBLIC_BACKEND_URL=
@@ -56,7 +71,7 @@ COMMAND=${1:-up}
 case $COMMAND in
     build)
         echo -e "${GREEN}Building Docker image...${NC}"
-        docker build -t patent-generator .
+        docker build -t invoice-processor .
         echo -e "${GREEN}Build complete!${NC}"
         ;;
     up)
@@ -85,12 +100,12 @@ case $COMMAND in
         ;;
     shell)
         echo -e "${GREEN}Opening shell in container...${NC}"
-        docker exec -it patent-generator /bin/bash
+        docker exec -it invoice-processor /bin/bash
         ;;
     clean)
         echo -e "${YELLOW}Cleaning up...${NC}"
         docker-compose down -v
-        docker rmi patent-generator 2>/dev/null || true
+        docker rmi invoice-processor 2>/dev/null || true
         echo -e "${GREEN}Cleanup complete!${NC}"
         ;;
     *)

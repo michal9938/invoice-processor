@@ -1,14 +1,14 @@
 steps:
   # Build the container image
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/patent-generator:$COMMIT_SHA', '-t', 'gcr.io/$PROJECT_ID/patent-generator:latest', '.']
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/invoice-processor:$COMMIT_SHA', '-t', 'gcr.io/$PROJECT_ID/invoice-processor:latest', '.']
   
   # Push the container image to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/patent-generator:$COMMIT_SHA']
+    args: ['push', 'gcr.io/$PROJECT_ID/invoice-processor:$COMMIT_SHA']
   
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/patent-generator:latest']
+    args: ['push', 'gcr.io/$PROJECT_ID/invoice-processor:latest']
   
   # Deploy container image to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -16,9 +16,9 @@ steps:
     args:
       - 'run'
       - 'deploy'
-      - 'patent-generator'
+      - 'invoice-processor'
       - '--image'
-      - 'gcr.io/$PROJECT_ID/patent-generator:$COMMIT_SHA'
+      - 'gcr.io/$PROJECT_ID/invoice-processor:$COMMIT_SHA'
       - '--region'
       - 'us-central1'
       - '--platform'
@@ -38,8 +38,8 @@ steps:
       - 'PORT=8080'
 
 images:
-  - 'gcr.io/$PROJECT_ID/patent-generator:$COMMIT_SHA'
-  - 'gcr.io/$PROJECT_ID/patent-generator:latest'
+  - 'gcr.io/$PROJECT_ID/invoice-processor:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/invoice-processor:latest'
 
 options:
   machineType: 'E2_HIGHCPU_8'

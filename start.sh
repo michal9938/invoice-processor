@@ -6,7 +6,7 @@ PORT=${PORT:-8080}
 BACKEND_PORT=8000
 FRONTEND_PORT=3000
 
-echo "=== Starting Patent Generator Services ==="
+echo "=== Starting Invoice Processor Services ==="
 echo "PORT: $PORT"
 echo "Backend Port: $BACKEND_PORT"
 echo "Frontend Port: $FRONTEND_PORT"
@@ -62,8 +62,8 @@ http {
         }
 
         # Health check
-        location = /healthz {
-            proxy_pass http://backend/healthz;
+        location = /health {
+            proxy_pass http://backend/health;
             proxy_http_version 1.1;
             proxy_set_header Host \$host;
             proxy_set_header X-Real-IP \$remote_addr;
@@ -95,14 +95,14 @@ nginx -t || {
 
 # Start backend in background
 echo "Starting FastAPI backend on port $BACKEND_PORT..."
-cd /app/backend
-uvicorn app.main:app --host 0.0.0.0 --port $BACKEND_PORT &
+cd /app
+uvicorn backend.main:app --host 0.0.0.0 --port $BACKEND_PORT &
 BACKEND_PID=$!
 
 # Wait for backend to be ready (with shorter intervals)
 echo "Waiting for backend to start..."
 for i in {1..60}; do
-    if curl -fsS http://localhost:$BACKEND_PORT/healthz > /dev/null 2>&1; then
+    if curl -fsS http://localhost:$BACKEND_PORT/health > /dev/null 2>&1; then
         echo "✓ Backend is ready!"
         break
     fi
