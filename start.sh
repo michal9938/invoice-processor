@@ -11,8 +11,7 @@ echo "PORT: $PORT"
 echo "Backend Port: $BACKEND_PORT"
 echo "Frontend Port: $FRONTEND_PORT"
 
-# Set backend URL for frontend (use relative URLs in production)
-export NEXT_PUBLIC_BACKEND_URL=""
+# Frontend uses relative URLs for API calls (same domain)
 
 # Generate nginx config with dynamic PORT
 echo "Generating nginx configuration for port $PORT..."

@@ -50,8 +50,7 @@ PRICE_TOLERANCE_PERCENT=5.0
 PORT=8080
 HOST=0.0.0.0
 
-# Frontend
-NEXT_PUBLIC_BACKEND_URL=
+# Frontend uses relative URLs (no NEXT_PUBLIC_BACKEND_URL needed)
 EOF
     echo -e "${YELLOW}Please create a .env file with your configuration!${NC}"
     echo "You can copy .env.example and fill in your values."
