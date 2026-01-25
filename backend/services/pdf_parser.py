@@ -124,7 +124,13 @@ class PDFParserService:
                 page_height = first_page.height
                 top_area_height = min(200, page_height * 0.3)
                 
-                # Crop top area
+                # Ensure we have a valid crop area
+                if top_area_height <= 0 or first_page.width <= 0:
+                    logger.warning("Invalid page dimensions for logo extraction")
+                    return None
+                
+                # Crop top area - pdfplumber bbox format: (x0, top, x1, bottom)
+                # where top and bottom are distances from the top of the page
                 bbox = (0, 0, first_page.width, top_area_height)
                 cropped_page = first_page.crop(bbox)
                 
@@ -132,13 +138,24 @@ class PDFParserService:
                 im = cropped_page.to_image(resolution=150)
                 pil_image = im.original
                 
+                # Ensure image is in RGB mode (required for PNG saving)
+                if pil_image.mode != 'RGB':
+                    pil_image = pil_image.convert('RGB')
+                
+                # Check if image has valid dimensions
+                if pil_image.size[0] == 0 or pil_image.size[1] == 0:
+                    logger.warning("Extracted logo image has invalid dimensions")
+                    return None
+                
                 # Convert to PNG bytes
                 img_bytes = io.BytesIO()
-                pil_image.save(img_bytes, format='PNG')
+                pil_image.save(img_bytes, format='PNG', optimize=True)
                 img_bytes.seek(0)
+                image_data = img_bytes.read()
+                img_bytes.close()
                 
-                logger.info("Extracted logo image from PDF first page")
-                return img_bytes.read()
+                logger.info(f"Extracted logo image from PDF first page (size: {pil_image.size[0]}x{pil_image.size[1]})")
+                return image_data
                 
         except Exception as e:
             logger.warning(f"Failed to extract logo image: {e}")
