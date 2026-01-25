@@ -6,10 +6,9 @@ WORKDIR /app/frontend
 
 # Accept build arguments for Next.js public environment variables
 # These are baked into the JavaScript bundle at build time
-# Default to empty strings if not provided (will cause runtime error, but allows build to complete)
-ARG NEXT_PUBLIC_SUPABASE_URL=""
-ARG NEXT_PUBLIC_SUPABASE_ANON_KEY=""
-ARG NEXT_PUBLIC_BACKEND_URL=""
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG NEXT_PUBLIC_BACKEND_URL
 
 # Set as environment variables for the build process
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
@@ -24,6 +23,18 @@ RUN npm ci
 
 # Copy frontend source code
 COPY frontend/ ./
+
+# Verify environment variables are set before build
+# This will fail the build if they're missing, making the issue obvious
+RUN if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ] || [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ]; then \
+    echo "================================================"; \
+    echo "ERROR: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is not set!"; \
+    echo "These must be provided as build arguments via --build-arg"; \
+    echo "Check your Cloud Build trigger substitutions."; \
+    echo "================================================"; \
+    exit 1; \
+  fi && \
+  echo "✓ Build arguments verified: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set"
 
 # Build Next.js application (NEXT_PUBLIC_* vars are baked in here)
 RUN npm run build
