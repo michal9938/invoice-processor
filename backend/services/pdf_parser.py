@@ -218,6 +218,20 @@ Product name and SKU number can be in same cell.
 
 Please extract quantity exactly. Languages are Danish in PDF text. And they can have suffix PCS, STK, etc.
 
+DISCOUNT EXTRACTION RULES:
+- Discount information can appear in various formats in the PDF (percentage, fixed amount, or both)
+- Look for discount columns in the invoice table/rows (e.g., "Rabat", "Discount", "Afslag" in Danish)
+- Discount can be shown as:
+  * Percentage (e.g., "10%", "15%", "20%") - extract as a number (e.g., 10, 15, 20)
+  * Fixed amount (e.g., "50.00", "100.00") - extract as a number
+  * Both percentage and fixed amount may be present
+- The "discount" field should contain the discount percentage or amount as a number
+- The "discount_total" field should contain the total discount amount applied to the line item
+- If discount is shown as percentage, calculate discount_total = (unit_price * quantity) * (discount / 100)
+- If discount is shown as fixed amount, use that value for discount_total
+- If no discount is present, set both "discount" and "discount_total" to null
+- Extract discount information accurately from the invoice - do not skip or ignore discount fields
+
 Response will be written in English.
 
 INVOICE LINES EXTRACTION RULES:
@@ -229,8 +243,8 @@ INVOICE LINES EXTRACTION RULES:
 - Extract ALL rows from the invoice line items table, not just the first few
 - If the invoice has multiple pages, extract lines from ALL pages
 
-supplier_name is one of these. Logo image ususally stans for Supplier, but you can confirm that from earlier part of invoice text. e.x. Sivantos A/S :
-Alpine, Audinell, Bernafon, Duraxx, Ewanto, GN, Oticon, Phonak, Sivantos, Starkey, Widx, unitron
+supplier_name is one of these. Logo image ususally stands for Supplier, but you can confirm that from earlier part of invoice text. e.x. Sivantos A/S Anway you should extract it correctly from one of these:
+Alpine, Audinell, Bernafon, Duraxx, Ewanto, GN, Oticon, Phonak, Sivantos, Starkey, Widex, unitron
 
 expected output:
 {

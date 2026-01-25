@@ -144,7 +144,7 @@ export default function InvoiceDetailPage() {
   const handleViewPDF = async () => {
     if (!invoice?.storage_path) return;
 
-    const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/pdfs/${invoice.storage_path}`;
+    const url = `https://xcnwbfmoxqacpdscgaef.supabase.co/storage/v1/object/public/pdfs/${invoice.storage_path}`;
     window.open(url, "_blank");
   };
 
