@@ -100,7 +100,7 @@ class ValidationService:
                     mismatch_count += 1
                 elif status == "created_price_record":
                     created_price_record_count += 1
-                elif status == "no_match":
+                elif status == "unknown":
                     no_match_count += 1
             
             # Determine overall invoice status
@@ -186,7 +186,7 @@ class ValidationService:
             )
         else:
             # No matching key available
-            await self._update_invoice_line_status(line_id, "no_match")
+            await self._update_invoice_line_status(line_id, "unknown")
             await self._log_audit(
                 "invoice",
                 invoice_id,
@@ -196,7 +196,7 @@ class ValidationService:
                     "invoice_line_id": str(line_id)
                 }
             )
-            return {"status": "no_match"}
+            return {"status": "unknown"}
         
         if not buying_price_record:
             # No match found - try to create price record
@@ -229,7 +229,7 @@ class ValidationService:
                 return {"status": "created_price_record", "buying_price_record_id": new_price_record_id}
             else:
                 # Not enough data
-                await self._update_invoice_line_status(line_id, "no_match")
+                await self._update_invoice_line_status(line_id, "unknown")
                 await self._log_audit(
                     "invoice",
                     invoice_id,
@@ -239,7 +239,7 @@ class ValidationService:
                         "invoice_line_id": str(line_id)
                     }
                 )
-                return {"status": "no_match"}
+                return {"status": "unknown"}
         
         # Match found - check if prices match
         expected_unit_price = float(buying_price_record["unit_price"])
@@ -247,8 +247,8 @@ class ValidationService:
         
         if actual_unit_price is None:
             # No unit price to compare
-            await self._update_invoice_line_status(line_id, "no_match")
-            return {"status": "no_match"}
+            await self._update_invoice_line_status(line_id, "unknown")
+            return {"status": "unknown"}
         
         diff_unit_price = actual_unit_price - expected_unit_price
         
@@ -444,9 +444,6 @@ class ValidationService:
         """Update invoice_line status field"""
         try:
             invoice_lines_table = supabase_client.get_table("invoice_lines")
-            print("")
-            print("status : ", status)
-            print("")
             invoice_lines_table.update({
                 "status": status
             }).eq("id", str(invoice_line_id)).execute()
