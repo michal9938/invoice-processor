@@ -36,7 +36,12 @@ interface InvoiceLine {
   product_name: string | null;
   description: string | null;
   quantity: number | null;
+  unit: string | null;
   unit_price: number | null;
+  discount: number | null;
+  discount_total: number | null;
+  net_amount: number | null;
+  vat_percentage: number | null;
   line_total: number | null;
   currency: string | null;
   status: string | null;
@@ -328,7 +333,7 @@ export default function InvoiceDetailPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8 animate-fade-in">
           <Link
@@ -427,10 +432,22 @@ export default function InvoiceDetailPage() {
                     Product
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">
-                    Quantity
+                    Qty
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">
+                    Unit
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">
                     Unit Price
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">
+                    Discount
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">
+                    VAT %
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">
+                    Net Amount
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">
                     Total
@@ -482,7 +499,19 @@ export default function InvoiceDetailPage() {
                         {line.quantity || "—"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
+                        {line.unit || "—"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
                         {formatCurrency(line.unit_price, invoice.currency)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
+                        {line.discount ? formatCurrency(line.discount, invoice.currency) : "—"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
+                        {line.vat_percentage !== null ? `${line.vat_percentage}%` : "—"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
+                        {line.net_amount ? formatCurrency(line.net_amount, invoice.currency) : "—"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
                         {formatCurrency(line.line_total, invoice.currency)}

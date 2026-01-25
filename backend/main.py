@@ -37,15 +37,16 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Invoice Control System API")
     logger.info(f"Supabase URL: {settings.SUPABASE_URL}")
     logger.info(f"Email polling interval: {settings.POLL_INTERVAL_MINUTES} minutes")
+    logger.info(f"Batch size: {settings.MAX_EMAILS_PER_RUN} invoices per batch")
     
     orchestration_task = None
     polling_task = None
     
     async def process_received_invoices_batch() -> int:
-        """Process all invoices with status='received' in batch"""
+        """Process invoices with status='received' in small batches for stability"""
         try:
             invoices_table = supabase_client.get_table("invoices")
-            result = invoices_table.select("id").eq("status", "received").limit(50).execute()
+            result = invoices_table.select("id").eq("status", "received").limit(settings.MAX_EMAILS_PER_RUN).execute()
             
             if not result.data:
                 return 0
@@ -70,10 +71,10 @@ async def lifespan(app: FastAPI):
             return 0
     
     async def process_parsed_invoices_batch() -> int:
-        """Process all invoices with status='parsed' in batch"""
+        """Process invoices with status='parsed' in small batches for stability"""
         try:
             invoices_table = supabase_client.get_table("invoices")
-            result = invoices_table.select("id").eq("status", "parsed").limit(50).execute()
+            result = invoices_table.select("id").eq("status", "parsed").limit(settings.MAX_EMAILS_PER_RUN).execute()
             
             if not result.data:
                 return 0
@@ -100,39 +101,51 @@ async def lifespan(app: FastAPI):
     async def invoice_processing_orchestrator():
         """
         Orchestrated pipeline: Poll emails → Parse all received → Validate all parsed
-        Runs in sequence to ensure smooth processing of batches
+        Processes in small batches for stability and accuracy
         """
         while True:
             try:
-                # Step 1: Poll emails (only if background polling is enabled)
-                if settings.ENABLE_BACKGROUND_POLLING:
+                # Step 1: Poll emails (only if background polling is disabled)
+                # If ENABLE_BACKGROUND_POLLING is True, polling happens in separate task
+                if not settings.ENABLE_BACKGROUND_POLLING:
                     try:
                         await email_polling_service.poll_and_process_emails()
                         logger.info("Email polling completed")
                     except Exception as e:
                         logger.error(f"Email polling error: {e}")
                 
-                # Step 2: Process all received invoices (parse them)
-                # Keep processing until no more received invoices remain
+                # Step 2: Process all received invoices (parse them) - continue until done
+                total_parsed = 0
                 while True:
                     parsed_count = await process_received_invoices_batch()
-                    break;
-                    logger.info(f"Parsed {parsed_count} invoices, checking for more...")
+                    if parsed_count == 0:
+                        break  # No more received invoices
+                    total_parsed += parsed_count
+                    logger.info(f"Parsed {parsed_count} invoices (total: {total_parsed}), checking for more...")
                     # Small delay between batches to avoid tight loops
                     await asyncio.sleep(1)
                 
-
+                if total_parsed > 0:
+                    logger.info(f"Completed parsing phase: {total_parsed} invoices processed")
+                
+                # Step 3: Process all parsed invoices (validate them) - continue until done
+                total_validated = 0
                 while True:
                     validated_count = await process_parsed_invoices_batch()
                     if validated_count == 0:
-                        break
-                    logger.info(f"Validated {validated_count} invoices, checking for more...")
+                        break  # No more parsed invoices
+                    total_validated += validated_count
+                    logger.info(f"Validated {validated_count} invoices (total: {total_validated}), checking for more...")
                     # Small delay between batches to avoid tight loops
                     await asyncio.sleep(1)
                 
-                # Wait before next orchestration cycle
-                # If background polling is disabled, check more frequently for new invoices
-                sleep_interval = 30 if settings.ENABLE_BACKGROUND_POLLING else 10
+                if total_validated > 0:
+                    logger.info(f"Completed validation phase: {total_validated} invoices processed")
+                
+                # Wait for polling interval before next orchestration cycle
+                # After completing all three pipelines (poll → parse → validate), wait for the full interval
+                sleep_interval = settings.POLL_INTERVAL_MINUTES * 60
+                logger.info(f"All pipelines completed. Orchestrator cycle complete, sleeping for {settings.POLL_INTERVAL_MINUTES} minutes ({sleep_interval} seconds)")
                 await asyncio.sleep(sleep_interval)
                 
             except Exception as e:
@@ -140,7 +153,9 @@ async def lifespan(app: FastAPI):
                 await asyncio.sleep(30)  # Wait longer on error
     
     # Start background email polling task (optional - for local/dev environments)
-    # This runs independently for periodic email checks
+    # NOTE: When background polling is enabled, it runs independently and does NOT coordinate
+    # with the orchestrator. The orchestrator will still process invoices but won't poll emails.
+    # For proper orchestration, set ENABLE_BACKGROUND_POLLING=False and let orchestrator handle everything.
     if settings.ENABLE_BACKGROUND_POLLING:
         async def poll_emails_periodically():
             """Background task to poll emails periodically (independent of orchestrator)"""
@@ -152,13 +167,15 @@ async def lifespan(app: FastAPI):
                     logger.error(f"Email polling error: {e}")
                 
                 # Wait for next polling interval (convert minutes to seconds)
-                await asyncio.sleep(settings.POLL_INTERVAL_MINUTES * 60)
+                logger.info(f"Email polling service waiting for next polling interval: {settings.POLL_INTERVAL_MINUTES} minutes")
+                await asyncio.sleep(60)
         
         # Start polling task
         polling_task = asyncio.create_task(poll_emails_periodically())
-        logger.info("Email polling service started (background mode)")
+        logger.info("Email polling service started (background mode - runs independently of orchestrator)")
+        logger.warning("NOTE: Background polling runs independently. Orchestrator will process invoices but not poll emails.")
     else:
-        logger.info("Email polling service configured for Cloud Scheduler (background polling disabled)")
+        logger.info("Email polling service configured for orchestrator control (background polling disabled)")
     
     # Start orchestration task (always runs to process invoices through the pipeline)
     orchestration_task = asyncio.create_task(invoice_processing_orchestrator())

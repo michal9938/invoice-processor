@@ -223,7 +223,7 @@ export function Navigation() {
               const isActive = pathname === item.href;
               return (
                 <Link
-                  key={item.name}
+                  key={item.name} 
                   href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
                   className={cn(

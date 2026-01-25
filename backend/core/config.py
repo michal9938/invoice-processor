@@ -29,8 +29,8 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     
     # Worker Settings
-    MAX_EMAILS_PER_RUN: int = 50
-    POLL_INTERVAL_MINUTES: int = 3
+    MAX_EMAILS_PER_RUN: int = 5
+    POLL_INTERVAL_MINUTES: int = 90
     ENABLE_BACKGROUND_POLLING: bool = False  # Set to False for Cloud Run with Cloud Scheduler
     
     # PDF Processing Settings

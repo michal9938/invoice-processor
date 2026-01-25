@@ -26,7 +26,7 @@ interface Invoice {
   created_at: string;
 }
 
-const vendors = ["Alpine", "Audinell", "Bernafon", "Duraxx", "Ewanto", "GN", "Oticon", "Phonak", "Sivantos", "Starkey", "Widx"]
+const vendors = ["Alpine", "Audinell", "Bernafon", "Duraxx", "Ewanto", "GN", "Oticon", "Phonak", "Sivantos", "Starkey", "Widx", 'unitron']
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> =
   {

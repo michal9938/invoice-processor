@@ -5,9 +5,10 @@ Extracts structured data from PDF invoices using OpenAI GPT-4o with logo and tex
 import io
 import base64
 import json
+import re
 from typing import List, Dict, Any, Optional
 from uuid import UUID, uuid4
-from datetime import datetime
+from datetime import datetime, date
 import pdfplumber
 from PIL import Image
 from openai import OpenAI
@@ -24,6 +25,68 @@ class PDFParserService:
         self._openai_client: Optional[OpenAI] = None
         self.default_model = "gpt-4o"
         self.fallback_model = "gpt-4o"
+        # Danish month names mapping
+        self.danish_months = {
+            'januar': 1, 'februar': 2, 'marts': 3, 'april': 4,
+            'maj': 5, 'juni': 6, 'juli': 7, 'august': 8,
+            'september': 9, 'oktober': 10, 'november': 11, 'december': 12
+        }
+    
+    def _parse_date(self, date_str: Optional[str]) -> Optional[str]:
+        """
+        Parse date string from various formats (including Danish) to ISO format (YYYY-MM-DD)
+        
+        Args:
+            date_str: Date string in various formats (e.g., "9. januar 2026", "2026-01-09", etc.)
+        
+        Returns:
+            ISO format date string (YYYY-MM-DD) or None if parsing fails
+        """
+        if not date_str:
+            return None
+        
+        try:
+            # Try parsing Danish format: "9. januar 2026" or "9 januar 2026"
+            danish_pattern = r'(\d{1,2})\.?\s+(\w+)\s+(\d{4})'
+            match = re.match(danish_pattern, date_str.strip(), re.IGNORECASE)
+            if match:
+                day = int(match.group(1))
+                month_name = match.group(2).lower()
+                year = int(match.group(3))
+                
+                if month_name in self.danish_months:
+                    month = self.danish_months[month_name]
+                    parsed_date = date(year, month, day)
+                    return parsed_date.isoformat()
+            
+            # Try ISO format: "2026-01-09"
+            try:
+                parsed_date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                return parsed_date.date().isoformat()
+            except:
+                pass
+            
+            # Try DD.MM.YYYY format: "09.01.2026"
+            try:
+                parsed_date = datetime.strptime(date_str.strip(), '%d.%m.%Y')
+                return parsed_date.date().isoformat()
+            except:
+                pass
+            
+            # Try common formats: "09/01/2026", "09-01-2026", etc.
+            for fmt in ['%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%Y/%m/%d']:
+                try:
+                    parsed_date = datetime.strptime(date_str.strip(), fmt)
+                    return parsed_date.date().isoformat()
+                except:
+                    continue
+            
+            logger.warning(f"Could not parse date format: {date_str}")
+            return None
+            
+        except Exception as e:
+            logger.warning(f"Error parsing date '{date_str}': {e}")
+            return None
     
     @property
     def openai_client(self) -> OpenAI:
@@ -123,19 +186,34 @@ class PDFParserService:
         """Get the strict JSON schema prompt for OpenAI"""
         return """You are an invoice extraction engine. Your task is to extract facts only from the provided PDF text and the provided logo image.
 
+ You MUST extract ALL invoice lines (line items) from the invoice. Invoice lines are the products, services, or items listed in the invoice table/rows. Each line item represents one product or service being invoiced.
+
 Do not guess. If a field is not explicitly present, output null. Accuracy is very important. Language is Danish.
-Regarding the Quantity field, it normally has a PCS suffix. But return number.
+Regarding the Quantity field, return number.
 Return ONLY valid JSON that matches the schema exactly. No markdown, no commentary.
 And ',' in price number means '.'.
 
-Currency : EUR or DKK
+Currency : EUR or DKK : 
 
 Logo stands for supplier.
 
 Product name and SKU number can be in same cell.
 
-supplier_name is one of these :
-Alpine, Audinell, Bernafon, Duraxx, Ewanto, GN, Oticon, Phonak, Sivantos, Starkey, Widx
+Please extract quantity exactly. Languages are Danish in PDF text.
+
+Response will be written in English.
+
+INVOICE LINES EXTRACTION RULES:
+- The "lines" array MUST contain ALL line items from the invoice table/rows
+- Each row in the invoice table is one line item
+- Even if some fields (sku, product_name, etc.) are missing, you MUST still include the line item
+- Line numbers (line_no) should be sequential starting from 1
+- Look for tables with columns like: Line Number, Product Name, SKU, Quantity, Unit Price, Total, etc.
+- Extract ALL rows from the invoice line items table, not just the first few
+- If the invoice has multiple pages, extract lines from ALL pages
+
+supplier_name is one of these. Logo image ususally stans for Supplier, but you can confirm that from aerlied part of invoice text :
+Alpine, Audinell, Bernafon, Duraxx, Ewanto, GN, Oticon, Phonak, Sivantos, Starkey, Widx, unitron
 
 expected output:
 {
@@ -153,7 +231,12 @@ expected output:
       "product_name": null,
       "description": null,
       "quantity": null,
+      "unit": null,
       "unit_price": null,
+      "discount": null,
+      "discount_total": null,
+      "net_amount": null,
+      "vat_percentage": null,
       "line_total": null
     }
   ],
@@ -366,11 +449,28 @@ expected output:
             #         logger.error(f"Fallback to {self.fallback_model} failed: {e}")
             #         logger.info("Proceeding with GPT-4o-mini results despite missing fields")
             
-            # Update invoice table
-            await self._update_invoice(invoice_id, extracted_invoice)
+            # Try to update invoice table with header fields (but NOT status yet)
+            # If this fails, we still want to insert invoice lines
+            header_update_success = False
+            try:
+                await self._update_invoice_header_fields(invoice_id, extracted_invoice)
+                header_update_success = True
+            except Exception as e:
+                logger.error(f"Failed to update invoice header fields for {invoice_id}: {e}")
+                logger.info("Continuing to insert invoice lines despite header update failure")
             
-            # Replace invoice lines
-            line_count = await self._replace_invoice_lines(invoice_id, extracted_invoice.get("lines", []))
+            # Replace invoice lines - this is critical, do it even if header update failed
+            # Clean and normalize the invoice lines data before insertion
+            cleaned_lines = self._clean_invoice_lines(extracted_invoice.get("lines", []))
+            line_count = await self._replace_invoice_lines(invoice_id, cleaned_lines)
+            
+            # Now update status to "parsed" after invoice lines are successfully extracted
+            # Status should be "parsed" after extraction, NOT "needs_review"
+            # "needs_review" is only set by validation service if there are issues
+            if line_count > 0:
+                await self._update_invoice_status_to_parsed(invoice_id)
+            else:
+                logger.warning(f"No invoice lines extracted for {invoice_id}, keeping status as 'received'")
             
             # Add audit log
             await self._log_invoice_parsed(
@@ -389,46 +489,118 @@ expected output:
             
         except Exception as e:
             logger.error(f"Failed to parse invoice {invoice_id}: {e}")
-            # Update status to indicate parsing failure
-            try:
-                invoices_table = supabase_client.get_table("invoices")
-                invoices_table.update({
-                    "status": "needs_review"
-                }).eq("id", str(invoice_id)).execute()
-            except:
-                pass
+            # Keep status as "received" if parsing fails - don't set to "needs_review"
+            # Status should only be set to "needs_review" by validation service after validation
+            # This allows the invoice to be retried for parsing
             raise
     
-    async def _update_invoice(
+    async def _update_invoice_header_fields(
         self, 
         invoice_id: UUID, 
         extracted_data: Dict[str, Any]
     ):
-        """Update invoice table with extracted header fields"""
+        """Update invoice table with extracted header fields (without changing status)"""
         try:
             invoices_table = supabase_client.get_table("invoices")
+            
+            # Parse date to ISO format if present
+            invoice_date = extracted_data.get("invoice_date")
+            if invoice_date:
+                invoice_date = self._parse_date(invoice_date)
             
             update_data = {
                 "supplier_name": extracted_data.get("supplier_name"),
                 "invoice_number": extracted_data.get("invoice_number"),
-                "invoice_date": extracted_data.get("invoice_date"),
+                "invoice_date": invoice_date,  # Now in ISO format or None
                 "currency": extracted_data.get("currency"),
                 "subtotal_amount": extracted_data.get("subtotal_amount"),
                 "tax_amount": extracted_data.get("tax_amount"),
                 "total_amount": extracted_data.get("total_amount"),
-                "status": "parsed",
-                "parsed_at": datetime.now().isoformat()
             }
             
             # Remove None values
             update_data = {k: v for k, v in update_data.items() if v is not None}
+            
+            if not update_data:
+                logger.warning(f"No header fields to update for invoice {invoice_id}")
+                return
             
             invoices_table.update(update_data).eq("id", str(invoice_id)).execute()
             
             logger.info(f"Updated invoice {invoice_id} with extracted header fields")
             
         except Exception as e:
-            logger.error(f"Failed to update invoice: {e}")
+            logger.error(f"Failed to update invoice header fields: {e}")
+            raise
+    
+    def _clean_invoice_lines(self, lines: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Clean and normalize invoice lines data before insertion
+        - Convert vat_percentage from "25%" to 25.0 (numeric)
+        - Ensure numeric fields are proper numbers or None
+        - Handle string numbers that need conversion
+        """
+        cleaned_lines = []
+        for line in lines:
+            cleaned_line = line.copy()
+            
+            # Clean vat_percentage: remove % sign and convert to float
+            vat_percentage = cleaned_line.get("vat_percentage")
+            if vat_percentage:
+                if isinstance(vat_percentage, str):
+                    # Remove % sign and whitespace
+                    vat_str = vat_percentage.replace('%', '').strip()
+                    try:
+                        cleaned_line["vat_percentage"] = float(vat_str)
+                    except (ValueError, TypeError):
+                        logger.warning(f"Could not parse vat_percentage: {vat_percentage}, setting to None")
+                        cleaned_line["vat_percentage"] = None
+                elif isinstance(vat_percentage, (int, float)):
+                    cleaned_line["vat_percentage"] = float(vat_percentage)
+                else:
+                    cleaned_line["vat_percentage"] = None
+            else:
+                cleaned_line["vat_percentage"] = None
+            
+            # Ensure numeric fields are proper numbers
+            numeric_fields = ["quantity", "unit_price", "discount", "discount_total", "net_amount", "line_total"]
+            for field in numeric_fields:
+                value = cleaned_line.get(field)
+                if value is not None:
+                    if isinstance(value, str):
+                        # Try to convert string to float
+                        try:
+                            # Remove any currency symbols, spaces, and handle comma as decimal
+                            cleaned_value = value.replace(',', '.').replace(' ', '').replace('€', '').replace('$', '').replace('kr', '').replace('DKK', '').replace('EUR', '')
+                            cleaned_line[field] = float(cleaned_value)
+                        except (ValueError, TypeError):
+                            logger.warning(f"Could not parse {field}: {value}, setting to None")
+                            cleaned_line[field] = None
+                    elif isinstance(value, (int, float)):
+                        cleaned_line[field] = float(value)
+                    else:
+                        cleaned_line[field] = None
+                else:
+                    cleaned_line[field] = None
+            
+            cleaned_lines.append(cleaned_line)
+        
+        return cleaned_lines
+    
+    async def _update_invoice_status_to_parsed(self, invoice_id: UUID):
+        """Update invoice status to 'parsed' after invoice lines are successfully extracted"""
+        try:
+            invoices_table = supabase_client.get_table("invoices")
+            
+            invoices_table.update({
+                "status": "parsed",
+                "parsed_at": datetime.now().isoformat()
+            }).eq("id", str(invoice_id)).execute()
+            
+            logger.info(f"Updated invoice {invoice_id} status to 'parsed' after extracting invoice lines")
+            
+        except Exception as e:
+            logger.error(f"Failed to update invoice status to parsed: {e}")
             raise
     
     async def _replace_invoice_lines(
@@ -468,18 +640,35 @@ expected output:
                     "description": line.get("description"),
                     "status": None,  # Status will be set by validation service
                     "quantity": line.get("quantity"),
+                    "unit": line.get("unit"),  # Unit of measure (e.g., "PCS", "STK")
                     "unit_price": line.get("unit_price"),
+                    "discount": line.get("discount"),  # Discount amount per line
+                    "discount_total": line.get("discount_total"),  # Total discount for the line
+                    "net_amount": line.get("net_amount"),  # Net amount after discount
+                    "vat_percentage": line.get("vat_percentage"),  # VAT percentage (numeric, not string with %)
                     "line_total": line.get("line_total"),
                     "currency": line.get("currency")
                 }
                 line_records.append(line_record)
             
-            # Insert all lines
+            # Insert all lines - handle errors per line to ensure maximum insertion
+            inserted_count = 0
+            failed_count = 0
             for record in line_records:
-                invoice_lines_table.insert(record).execute()
+                try:
+                    invoice_lines_table.insert(record).execute()
+                    inserted_count += 1
+                except Exception as e:
+                    failed_count += 1
+                    logger.error(f"Failed to insert invoice line {record.get('line_no')} for invoice {invoice_id}: {e}")
+                    # Continue inserting other lines even if one fails
             
-            logger.info(f"Replaced {len(line_records)} invoice lines for invoice {invoice_id}")
-            return len(line_records)
+            if failed_count > 0:
+                logger.warning(f"Inserted {inserted_count} out of {len(line_records)} invoice lines for invoice {invoice_id}. {failed_count} lines failed.")
+            else:
+                logger.info(f"Replaced {inserted_count} invoice lines for invoice {invoice_id}")
+            
+            return inserted_count
             
         except Exception as e:
             logger.error(f"Failed to replace invoice lines: {e}")
