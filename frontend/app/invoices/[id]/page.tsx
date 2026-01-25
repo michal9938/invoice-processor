@@ -514,7 +514,7 @@ export default function InvoiceDetailPage() {
                         {formatCurrency(line.unit_price, invoice.currency)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
-                        {line.discount ? formatCurrency(line.discount, invoice.currency) : "—"}
+                        {line.discount ? `${line.discount}%` : "—"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
                         {line.vat_percentage !== null ? `${line.vat_percentage}%` : "—"}
