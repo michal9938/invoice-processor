@@ -19,6 +19,7 @@ lib64/
 # Environments
 .venv
 .env
+.env.local
 env/
 venv/
 ENV/
