@@ -212,7 +212,7 @@ INVOICE LINES EXTRACTION RULES:
 - Extract ALL rows from the invoice line items table, not just the first few
 - If the invoice has multiple pages, extract lines from ALL pages
 
-supplier_name is one of these. Logo image ususally stans for Supplier, but you can confirm that from aerlied part of invoice text :
+supplier_name is one of these. Logo image ususally stans for Supplier, but you can confirm that from earlier part of invoice text. e.x. Sivantos A/S :
 Alpine, Audinell, Bernafon, Duraxx, Ewanto, GN, Oticon, Phonak, Sivantos, Starkey, Widx, unitron
 
 expected output:
