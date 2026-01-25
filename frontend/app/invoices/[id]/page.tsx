@@ -225,12 +225,21 @@ export default function InvoiceDetailPage() {
 
       if (activateError) throw activateError;
 
+      // Update the current invoice line status to 'match'
+      const { error: updateCurrentLineError } = await supabase
+        .from("invoice_lines")
+        .update({ status: "match" })
+        .eq("id", line.id);
+
+      if (updateCurrentLineError) throw updateCurrentLineError;
+
       // Find and update related invoice_lines with same SKU and status 'created_price_record'
       const { data: invoiceLines, error: linesError } = await supabase
         .from("invoice_lines")
         .select("id, invoice_id")
         .eq("sku", line.sku)
-        .eq("status", "created_price_record");
+        .eq("status", "created_price_record")
+        .neq("id", line.id); // Exclude the current line since we already updated it
 
       if (linesError) throw linesError;
 

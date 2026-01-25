@@ -135,7 +135,8 @@ export default function PriceRecordsPage() {
 
       if (activateError) throw activateError;
 
-      // Find and update related invoice_lines with same SKU and status 'created_price_record'
+      // Update invoice_lines status to 'match' for lines with same SKU and status 'created_price_record'
+      // This ensures that when a price record is approved, all related invoice lines are marked as matched
       if (record.sku) {
         // First, get the invoice_id for the invoice_lines we need to update
         const { data: invoiceLines, error: linesError } = await supabase
