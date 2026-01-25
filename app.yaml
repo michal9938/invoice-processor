@@ -11,14 +11,14 @@ resources:
 
 # Health check
 readiness_check:
-  path: "/api/v1/auth/me"
+  path: "/health"
   check_interval_sec: 5
   timeout_sec: 4
   failure_threshold: 2
   success_threshold: 2
 
 liveness_check:
-  path: "/api/v1/auth/me"
+  path: "/health"
   check_interval_sec: 30
   timeout_sec: 4
   failure_threshold: 4
