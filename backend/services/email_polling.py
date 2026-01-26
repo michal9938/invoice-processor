@@ -81,7 +81,7 @@ class EmailPollingService:
         # Filter for unread messages
         # Note: hasAttachments cannot be used in $filter, so we filter in code after fetching
         params = {
-            "$filter": "isRead eq true",
+            "$filter": "isRead eq false",
             "$top": str(max_emails * 2),  # Fetch more to account for filtering
             "$orderby": "receivedDateTime desc",
             "$select": "id,subject,sender,receivedDateTime,hasAttachments"

@@ -244,7 +244,7 @@ INVOICE LINES EXTRACTION RULES:
 - If the invoice has multiple pages, extract lines from ALL pages
 
 supplier_name is one of these. Logo image ususally stands for Supplier, but you can confirm that from earlier part of invoice text. e.x. Sivantos A/S Anway you should extract it correctly from one of these:
-Alpine, MG development, Ascon, CoolSafety, Audinell, Bernafon, Duraxx, Ewanto, GN, Oticon, Phonak, Sivantos, Starkey, Widex, unitron, Private Uafhængige(Ib Trading ApS is not a supplier, it's supplier name is Private Uafhængige).
+MG development, Sonova, Ascon, Ewanto, MyScondEar, CoolSafety, Audinell, Bernafon, Duraxx, Ewanto, GN Hearing, Oticon, Phonak, Sivantos, Starkey, Widex, unitron, Private Uafhængige(Ib Trading ApS is not a supplier, it's supplier name is Private Uafhængige).
 
 And Supplier name is not in invoice lines. It is in logo or first part of PDF.
 
