@@ -27,6 +27,7 @@ interface Invoice {
   status: string;
   storage_path: string | null;
   created_at: string;
+  frieght_amount: number | null;
 }
 
 interface InvoiceLine {
@@ -195,7 +196,20 @@ export default function InvoiceDetailPage() {
       }
 
       // If it's need_review, activate it (which will also update invoice_lines)
-      // First, find and deactivate previous active records with the same SKU
+      // Determine valid_from date: use invoice date if available, otherwise use price record's valid_from or today
+      let validFrom: string;
+      if (invoice.invoice_date) {
+        // Use invoice date
+        validFrom = invoice.invoice_date.split('T')[0]; // Extract date part if it's a datetime
+      } else if (priceRecord.valid_from) {
+        // Use existing valid_from from price record
+        validFrom = priceRecord.valid_from.split('T')[0];
+      } else {
+        // Use today's date as fallback
+        validFrom = new Date().toISOString().split('T')[0];
+      }
+
+      // First, find and deactivate ALL previous active records with the same SKU
       const { data: previousActive, error: prevError } = await supabase
         .from("buying_price_records")
         .select("id")
@@ -206,21 +220,34 @@ export default function InvoiceDetailPage() {
 
       if (prevError) throw prevError;
 
-      // Deactivate previous active records
+      // Deactivate previous active records and set their valid_to to the day before the new record's valid_from
       if (previousActive && previousActive.length > 0) {
         const previousIds = previousActive.map((r) => r.id);
+        
+        // Calculate valid_to date (day before valid_from)
+        const validFromDate = new Date(validFrom);
+        validFromDate.setDate(validFromDate.getDate() - 1);
+        const validTo = validFromDate.toISOString().split('T')[0];
+        
         const { error: deactivateError } = await supabase
           .from("buying_price_records")
-          .update({ status: "inactive" })
+          .update({ 
+            status: "inactive",
+            valid_to: validTo
+          })
           .in("id", previousIds);
 
         if (deactivateError) throw deactivateError;
       }
 
-      // Activate the current record
+      // Activate the current record and set valid_from properly
       const { error: activateError } = await supabase
         .from("buying_price_records")
-        .update({ status: "active" })
+        .update({ 
+          status: "active",
+          valid_from: validFrom,
+          valid_to: null  // Clear valid_to when activating
+        })
         .eq("id", priceRecord.id);
 
       if (activateError) throw activateError;
@@ -395,7 +422,7 @@ export default function InvoiceDetailPage() {
         </div>
 
         {/* Invoice Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-surface rounded-xl p-6 border border-border hover-lift">
             <h3 className="text-sm font-medium text-text-tertiary mb-2">
               Subtotal
@@ -410,6 +437,14 @@ export default function InvoiceDetailPage() {
             </h3>
             <p className="text-2xl font-bold text-text-primary">
               {formatCurrency(invoice.tax_amount, invoice.currency)}
+            </p>
+          </div>
+          <div className="bg-surface rounded-xl p-6 border border-border hover-lift">
+            <h3 className="text-sm font-medium text-text-tertiary mb-2">
+              Frieght
+            </h3>
+            <p className="text-2xl font-bold text-text-primary">
+              {formatCurrency(invoice.frieght_amount, invoice.currency)}
             </p>
           </div>
           <div className="bg-gradient-to-br from-[#06b6d4] to-[#0891b2] rounded-xl p-6 text-white hover-lift">

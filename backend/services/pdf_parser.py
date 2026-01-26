@@ -244,11 +244,13 @@ INVOICE LINES EXTRACTION RULES:
 - If the invoice has multiple pages, extract lines from ALL pages
 
 supplier_name is one of these. Logo image ususally stands for Supplier, but you can confirm that from earlier part of invoice text. e.x. Sivantos A/S Anway you should extract it correctly from one of these:
-Alpine, Ascon, Audinell, Bernafon, Duraxx, Ewanto, GN, Oticon, Phonak, Sivantos, Starkey, Widex, unitron, Private Uafhængige(Ib Trading ApS is not a supplier, it's supplier name is Private Uafhængige).
+Alpine, MG development, Ascon, CoolSafety, Audinell, Bernafon, Duraxx, Ewanto, GN, Oticon, Phonak, Sivantos, Starkey, Widex, unitron, Private Uafhængige(Ib Trading ApS is not a supplier, it's supplier name is Private Uafhængige).
 
 And Supplier name is not in invoice lines. It is in logo or first part of PDF.
 
 Note : Ib Trading ApS is not a supplier, it's supplier name is Private Uafhængige. Sivantos A/S is Sivantos.
+
+There can be tax_amount or frieght amount in invoice. You should extract it correctly.
 
 expected output:
 {
@@ -258,6 +260,7 @@ expected output:
   "currency": null,
   "subtotal_amount": null,
   "tax_amount": null,
+  "frieght_amount": null,
   "total_amount": null,
   "lines": [
     {
@@ -546,6 +549,7 @@ expected output:
             # Normalize amounts to ensure they're non-negative (database constraints)
             subtotal = extracted_data.get("subtotal_amount")
             tax = extracted_data.get("tax_amount")
+            freight = extracted_data.get("frieght_amount")  # Note: field name is "frieght_amount" in JSON
             total = extracted_data.get("total_amount")
             
             if subtotal is not None and subtotal < 0:
@@ -555,6 +559,10 @@ expected output:
             if tax is not None and tax < 0:
                 logger.warning(f"Negative tax_amount detected ({tax}), converting to positive")
                 tax = abs(tax)
+            
+            if freight is not None and freight < 0:
+                logger.warning(f"Negative frieght_amount detected ({freight}), converting to positive")
+                freight = abs(freight)
             
             if total is not None and total < 0:
                 logger.warning(f"Negative total_amount detected ({total}), converting to positive")
@@ -567,6 +575,7 @@ expected output:
                 "currency": extracted_data.get("currency"),
                 "subtotal_amount": subtotal,
                 "tax_amount": tax,
+                "frieght_amount": freight,
                 "total_amount": total,
             }
             
