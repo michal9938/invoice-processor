@@ -73,12 +73,6 @@ Ensure your Supabase database has the following tables:
 
 #### Development mode:
 
-**Option 1: Run from project root (recommended):**
-```bash
-# From d:\invoice\ directory
-cd invoice  # Ensure you're in the root directory, not backend/
-py -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8080
-```
 
 **Option 2: Run using main.py directly:**
 ```bash

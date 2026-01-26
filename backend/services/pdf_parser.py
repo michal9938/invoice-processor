@@ -244,7 +244,9 @@ INVOICE LINES EXTRACTION RULES:
 - If the invoice has multiple pages, extract lines from ALL pages
 
 supplier_name is one of these. Logo image ususally stands for Supplier, but you can confirm that from earlier part of invoice text. e.x. Sivantos A/S Anway you should extract it correctly from one of these:
-Alpine, Audinell, Bernafon, Duraxx, Ewanto, GN, Oticon, Phonak, Sivantos, Starkey, Widex, unitron
+Alpine, Audinell, Bernafon, Duraxx, Ewanto, GN, Oticon, Phonak, Sivantos, Starkey, Widex, unitron, Private Uafhængige.
+
+Note : Ib Trading ApS is not a supplier, it's supplier name is Private Uafhængige. Sivantos A/S is Sivantos.
 
 expected output:
 {
@@ -539,14 +541,31 @@ expected output:
             if invoice_date:
                 invoice_date = self._parse_date(invoice_date)
             
+            # Normalize amounts to ensure they're non-negative (database constraints)
+            subtotal = extracted_data.get("subtotal_amount")
+            tax = extracted_data.get("tax_amount")
+            total = extracted_data.get("total_amount")
+            
+            if subtotal is not None and subtotal < 0:
+                logger.warning(f"Negative subtotal_amount detected ({subtotal}), converting to positive")
+                subtotal = abs(subtotal)
+            
+            if tax is not None and tax < 0:
+                logger.warning(f"Negative tax_amount detected ({tax}), converting to positive")
+                tax = abs(tax)
+            
+            if total is not None and total < 0:
+                logger.warning(f"Negative total_amount detected ({total}), converting to positive")
+                total = abs(total)
+            
             update_data = {
                 "supplier_name": extracted_data.get("supplier_name"),
                 "invoice_number": extracted_data.get("invoice_number"),
                 "invoice_date": invoice_date,  # Now in ISO format or None
                 "currency": extracted_data.get("currency"),
-                "subtotal_amount": extracted_data.get("subtotal_amount"),
-                "tax_amount": extracted_data.get("tax_amount"),
-                "total_amount": extracted_data.get("total_amount"),
+                "subtotal_amount": subtotal,
+                "tax_amount": tax,
+                "total_amount": total,
             }
             
             # Remove None values
@@ -613,6 +632,25 @@ expected output:
                         cleaned_line[field] = None
                 else:
                     cleaned_line[field] = None
+            
+            # Normalize negative values to positive (database constraints require >= 0)
+            # If values are negative, take absolute value (likely extraction error or credit note formatting)
+            if cleaned_line.get("quantity") is not None and cleaned_line["quantity"] < 0:
+                logger.warning(f"Negative quantity detected ({cleaned_line['quantity']}), converting to positive")
+                cleaned_line["quantity"] = abs(cleaned_line["quantity"])
+            
+            if cleaned_line.get("unit_price") is not None and cleaned_line["unit_price"] < 0:
+                logger.warning(f"Negative unit_price detected ({cleaned_line['unit_price']}), converting to positive")
+                cleaned_line["unit_price"] = abs(cleaned_line["unit_price"])
+            
+            if cleaned_line.get("line_total") is not None and cleaned_line["line_total"] < 0:
+                logger.warning(f"Negative line_total detected ({cleaned_line['line_total']}), converting to positive")
+                cleaned_line["line_total"] = abs(cleaned_line["line_total"])
+            
+            # Also normalize net_amount if negative (for consistency)
+            if cleaned_line.get("net_amount") is not None and cleaned_line["net_amount"] < 0:
+                logger.warning(f"Negative net_amount detected ({cleaned_line['net_amount']}), converting to positive")
+                cleaned_line["net_amount"] = abs(cleaned_line["net_amount"])
             
             cleaned_lines.append(cleaned_line)
         
