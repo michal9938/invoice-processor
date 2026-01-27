@@ -321,7 +321,7 @@ class EmailPollingService:
                     "Authorization": f"Bearer {access_token}",
                     "Content-Type": "application/json"
                 }
-                response = await client.patch(graph_url, headers=headers, json={"isRead": False})
+                response = await client.patch(graph_url, headers=headers, json={"isRead": True})
                 response.raise_for_status()
                 logger.info(f"Marked email {message_id} as read")
         except Exception as e:
